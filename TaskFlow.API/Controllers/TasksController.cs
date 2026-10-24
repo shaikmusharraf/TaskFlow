@@ -1,38 +1,35 @@
-
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TaskFlow.API.Data;
-using TaskFlow.API.Entities;
+using TaskFlow.API.DTOs;
+using TaskFlow.API.Services;
 
 namespace TaskFlow.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly ITaskService _taskService;
+    private readonly ILogger<TasksController> _logger;
 
-    public TasksController(AppDbContext context)
+    public TasksController(ITaskService taskService, ILogger<TasksController> logger)
     {
-        _context = context;
+        _taskService = taskService;
+        _logger = logger;
     }
 
-    // GET: api/tasks
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskItem>>> GetTasks()
+    public async Task<ActionResult<List<TaskResponseDto>>> GetTasks()
     {
-        var tasks = await _context.TaskItems
-            .AsNoTracking()
-            .ToListAsync();
-
+        var tasks = await _taskService.GetAllAsync();
         return Ok(tasks);
     }
 
-    // GET: api/tasks/5
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<TaskItem>> GetTask(int id)
+    public async Task<ActionResult<TaskResponseDto>> GetTask(int id)
     {
-        var task = await _context.TaskItems.FindAsync(id);
+        var task = await _taskService.GetByIdAsync(id);
 
         if (task is null)
         {
@@ -42,79 +39,56 @@ public class TasksController : ControllerBase
         return Ok(task);
     }
 
-    // POST: api/tasks
     [HttpPost]
-    public async Task<ActionResult<TaskItem>> CreateTask(
-        TaskItem task)
+    public async Task<ActionResult<TaskResponseDto>> CreateTask(
+        CreateTaskDto dto)
     {
-        if (string.IsNullOrWhiteSpace(task.Title))
+        try
         {
-            return BadRequest("Task title is required.");
+            var task = await _taskService.CreateAsync(dto);
+
+            return CreatedAtAction(
+                nameof(GetTask),
+                new { id = task.Id },
+                task);
         }
-
-        task.Id = 0;
-        task.CreatedAt = DateTime.UtcNow;
-
-        _context.TaskItems.Add(task);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(
-            nameof(GetTask),
-            new { id = task.Id },
-            task);
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
-    // PUT: api/tasks/5
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateTask(
         int id,
-        TaskItem updatedTask)
+        UpdateTaskDto dto)
     {
-        if (id != updatedTask.Id)
+        try
         {
-            return BadRequest(
-                "The route ID and task ID must match.");
-        }
+            var updated = await _taskService.UpdateAsync(id, dto);
 
-        if (string.IsNullOrWhiteSpace(updatedTask.Title))
+            if (!updated)
+            {
+                return NotFound();
+            }
+
+            return NoContent();
+        }
+        catch (ArgumentException ex)
         {
-            return BadRequest("Task title is required.");
+            return BadRequest(new { message = ex.Message });
         }
-
-        var existingTask = await _context.TaskItems
-            .FindAsync(id);
-
-        if (existingTask is null)
-        {
-            return NotFound();
-        }
-
-        existingTask.Title = updatedTask.Title;
-        existingTask.Description = updatedTask.Description;
-        existingTask.Status = updatedTask.Status;
-        existingTask.Priority = updatedTask.Priority;
-        existingTask.DueDate = updatedTask.DueDate;
-        existingTask.AssignedToUserId =
-            updatedTask.AssignedToUserId;
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
     }
 
-    // DELETE: api/tasks/5
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
-        var task = await _context.TaskItems.FindAsync(id);
+        var deleted = await _taskService.DeleteAsync(id);
 
-        if (task is null)
+        if (!deleted)
         {
             return NotFound();
         }
-
-        _context.TaskItems.Remove(task);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
