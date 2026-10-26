@@ -1,0 +1,61 @@
+.app {
+  max-width: 42rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+  font-family: system-ui, sans-serif;
+}
+
+.eyebrow {
+  color: #52606d;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.task-form {
+  margin: 2rem 0;
+}
+
+.task-form__row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.task-form input {
+  flex: 1;
+  padding: 0.65rem;
+}
+
+.task-form button {
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+}
+
+.task-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  padding: 0.8rem;
+  border: 1px solid #d7dde3;
+  border-radius: 0.5rem;
+}
+
+.task label {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.task--done span {
+  color: #667085;
+  text-decoration: line-through;
+}
+
+.task-count,
+.empty-state {
+  color: #52606d;
+}
